@@ -1,11 +1,16 @@
 ﻿namespace Users.Core.Domain.Repositories;
 
-using System.Collections.Generic;
+using LanguageExt;
+
+using System;
 using System.Threading.Tasks;
 
+using Users.Core.Domain.DTO.Errors;
 using Users.Core.Domain.Models;
 
-internal interface IUserRepository
+public interface IUserRepository
 {
-    Task<IEnumerable<User>> GetUsersAsync();
+    Task<Either<EntityNotFoundError, User>> GetByIdAsync(Guid id);
+
+    Task<User> InsertAsync(User user);
 }
