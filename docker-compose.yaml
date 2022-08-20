@@ -1,0 +1,31 @@
+version: '2'
+services:
+
+  postgres:
+    image: postgres:14.5-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=demo
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=demo
+    volumes:
+      - ./docker/pgadmin/shared:/shared
+    ports:
+      - 5432:5432
+    networks:
+      - default
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=info@demo.it
+      - PGADMIN_DEFAULT_PASSWORD=password
+    volumes:
+      - ./docker/pgadmin/shared/:/shared
+    depends_on:
+      - postgres
+    ports:
+      - 5050:80
+    networks:
+      - default
