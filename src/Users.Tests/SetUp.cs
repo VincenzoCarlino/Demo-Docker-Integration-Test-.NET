@@ -6,8 +6,11 @@ using DockerDotNet.Presets.DTO;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Npgsql;
+
 using NUnit.Framework;
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -44,7 +47,8 @@ internal class SetUp
 
         _containers.Add(pgsqlDockerContainer);
 
-        await Task.Delay(5000).ConfigureAwait(false);
+        await WaitForPostgresToBeReasyAsync(postgresConfiguration)
+            .ConfigureAwait(false);
 
         var serviceCollection = new ServiceCollection();
 
@@ -55,12 +59,43 @@ internal class SetUp
         _serviceScopeFactory = serviceCollection.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
     }
 
+    private async Task WaitForPostgresToBeReasyAsync(PostgresConfiguration postgresConfiguration)
+    {
+        var connectionString = string.Format(
+            "Host={0};Username={1};Password={2};Database={3};Port={4}",
+            "localhost",
+            postgresConfiguration.User,
+            postgresConfiguration.Password,
+            postgresConfiguration.DbName,
+            postgresConfiguration.Port
+        );
+
+        for (int i = 0; i < 10; i++)
+        {
+            try
+            {
+                using var connection = new NpgsqlConnection(connectionString);
+                await connection.OpenAsync().ConfigureAwait(false);
+                if (connection.State == System.Data.ConnectionState.Open)
+                {
+                    return;
+                }
+            }
+            catch (Exception _)
+            {
+                await Task.Delay(i * 1000).ConfigureAwait(false);
+            }
+        }
+
+        throw new Exception("Unable to connect to postgres");
+    }
+
     [OneTimeTearDown]
     public async Task RunAfterAllTestsAsync()
     {
         foreach (var container in _containers)
         {
-            //await DockerContainerGenerator.DropContainerById(container.ContainerId).ConfigureAwait(false);
+            await DockerContainerGenerator.DropContainerById(container.ContainerId).ConfigureAwait(false);
         }
     }
 
